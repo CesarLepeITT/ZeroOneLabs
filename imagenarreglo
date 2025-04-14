@@ -1,0 +1,55 @@
+import numpy as np
+from numba import njit
+from PIL import Image
+
+class ImagenArreglo:
+    def __init__(self, ruta, tamaño=(150, 150)):
+        self.ruta = ruta
+        self.tamaño = tamaño
+        self.imagen_bn = None
+        self.vector = None
+
+        self._cargar_y_procesar()
+
+    def _cargar_y_procesar(self):
+        imagen = Image.open(self.ruta)
+        imagen = imagen.resize(self.tamaño)
+        self.imagen_bn = imagen.convert('L')  # Convertir a blanco y negro
+
+    def convertir_a_vector(self):
+        arreglo = np.asarray(self.imagen_bn)
+        self.vector = self._imagen_a_vector_numba(arreglo)
+        return self.vector
+
+    @staticmethod
+    @njit
+    def _imagen_a_vector_numba(imagen):
+        alto, ancho = imagen.shape
+        vector = np.empty(alto * ancho, dtype=np.uint8)
+        for i in range(alto):
+            for j in range(ancho):
+                vector[i * ancho + j] = imagen[i, j]
+        return vector
+
+    def vector_a_imagen(self):
+        if self.vector is None:
+            raise ValueError("Primero debes convertir la imagen a vector.")
+        ancho, alto = self.tamaño
+        matriz = self.vector.reshape((alto, ancho))
+        imagen = Image.fromarray(matriz, mode='L')
+        return imagen
+
+if __name__ == "__main__":
+    ruta_local = r'C:\Users\dell\Desktop\Areacircu\wd.jpg'
+    procesador = ImagenArreglo(ruta_local, tamaño=(150, 150))
+
+    vector = procesador.convertir_a_vector()
+    print("Tamaño del vector:", len(vector))
+
+    # Convertir a matriz e imprimir
+    matriz = vector.reshape(procesador.tamaño[::-1])  # (alto, ancho)
+    print("Imagen en forma de matriz:")
+    print(matriz)
+
+    imagen_recuperada = procesador.vector_a_imagen()
+    imagen_recuperada.show()
